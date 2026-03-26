@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="JavaShiYan01:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/JavaShiYan01_jar</output-path>
+    <root id="archive" name="JavaShiYan.jar">
+      <element id="module-output" name="JavaShiYan" />
+    </root>
+  </artifact>
+</component>
