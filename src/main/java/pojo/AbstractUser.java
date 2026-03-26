@@ -4,8 +4,14 @@ import java.io.IOException;
 
 import mapper.DataProcessing;
 
+import javax.swing.*;
 import java.io.*;
 import java.util.Collection;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.util.Collection; // 【确保这两个导入已存在，没有的话加上】
+
 
 /**
  * 用户抽象类
@@ -109,6 +115,7 @@ public abstract class AbstractUser {
             Archive archive = DataProcessing.searchArchive(archiveId.trim());
             if (archive == null) {
                 System.err.println("下载失败：档案号不存在 - " + archiveId);
+                JOptionPane.showMessageDialog(null, "下载失败：档案号不存在 - " + archiveId, "错误", JOptionPane.ERROR_MESSAGE);
                 return false;
             }
 
@@ -122,12 +129,24 @@ public abstract class AbstractUser {
             System.out.println("档案源文件路径：" + archiveDir);
             System.out.println("目标文件路径：" + destPath);
 
+            //新增：拼接信息，准备图形界面展示
+            StringBuilder downloadInfo = new StringBuilder();
+            downloadInfo.append("=== 正在下载档案 ===\n");
+            downloadInfo.append("档案号：").append(archive.getArchiveId()).append("\n");
+            downloadInfo.append("文件名：").append(archive.getFileName()).append("\n");
+            downloadInfo.append("描述：").append(archive.getDescription()).append("\n");
+            downloadInfo.append("创建者：").append(archive.getCreator()).append("\n\n");
+            downloadInfo.append("档案源文件路径：").append(archiveDir).append("\n");
+            downloadInfo.append("目标文件路径：").append(destPath).append("\n");
+
+
             // 构建档案文件的完整路径
             File archiveFile = new File(archiveDir+ archive.getFileName()+".ser");
 
             // 安全检查：验证文件是否存在且为有效文件
             if (!archiveFile.exists() || !archiveFile.isFile()) {
                 System.err.println("\n警告：档案文件不存在：" + archiveFile.getAbsolutePath());
+                JOptionPane.showMessageDialog(null, "警告：档案文件不存在：" + archiveFile.getAbsolutePath(), "错误", JOptionPane.ERROR_MESSAGE);
                 return false;
             }
 
@@ -136,6 +155,7 @@ public abstract class AbstractUser {
             if (!targetDir.exists()) {
                 if (!targetDir.mkdirs()) {
                     System.err.println("无法创建下载目录：" + targetDir);
+                    JOptionPane.showMessageDialog(null, "无法创建下载目录：" + targetDir, "错误", JOptionPane.ERROR_MESSAGE);
                     return false;
                 }
             }
@@ -156,18 +176,26 @@ public abstract class AbstractUser {
             }
 
             System.out.println("文件下载成功：" + targetFile.getAbsolutePath());
+
+            downloadInfo.append("\n文件下载成功！\n");
+            downloadInfo.append("完整路径：").append(targetFile.getAbsolutePath());
+            JOptionPane.showMessageDialog(null, downloadInfo.toString(), "下载成功", JOptionPane.INFORMATION_MESSAGE);
+
             return true;
         } catch (IOException e) {
             // 捕获并重新抛出 IO 异常
             System.err.println("下载过程中发生 IO 错误：" + e.getMessage());
+            JOptionPane.showMessageDialog(null, "下载过程中发生 IO 错误：" + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
             throw e;
         } catch (SQLException e) {
             // 捕获并重新抛出 SQL 异常
             System.err.println("数据库查询错误：" + e.getMessage());
+            JOptionPane.showMessageDialog(null, "数据库查询错误：" + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
             throw e;
         } catch (Exception e) {
             // 捕获未知异常并返回失败
             System.err.println("下载过程中发生未知错误：" + e.getMessage());
+            JOptionPane.showMessageDialog(null, "下载过程中发生未知错误：" + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
             return false;
         }
     }
@@ -179,7 +207,9 @@ public abstract class AbstractUser {
      *
      * @throws SQLException 当数据库查询发生错误时抛出
      */
+
     public void listAllArchives() throws SQLException {
+
         System.out.println("\n========== 档案列表 ==========");
 
         try {
@@ -190,6 +220,7 @@ public abstract class AbstractUser {
             if (allArchives.isEmpty()) {
                 System.out.println("当前没有档案记录");
                 System.out.println("=============================\n");
+                JOptionPane.showMessageDialog(null, "当前没有档案记录", "提示", JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
 
@@ -198,6 +229,9 @@ public abstract class AbstractUser {
             System.out.println("---------------------------------------------------------------");
             System.out.printf("%-10s %-10s %-20s %-20s%n", "档案号", "创建者", "文件名", "描述");
             System.out.println("---------------------------------------------------------------");
+
+            String[] columns = {"档案号", "创建者", "文件名", "描述"};
+            DefaultTableModel tableModel = new DefaultTableModel(columns, 0);
 
             // 遍历所有档案并格式化输出
             for (Archive archive : allArchives) {
@@ -212,19 +246,48 @@ public abstract class AbstractUser {
                         archive.getCreator(),
                         archive.getFileName(),
                         description);
+
+                tableModel.addRow(new String[]{
+                        archive.getArchiveId(),
+                        archive.getCreator(),
+                        archive.getFileName(),
+                        description // 表格里也用截断后的描述，和控制台保持一致
+                });
             }
 
             // 输出结束分隔线
             System.out.println("---------------------------------------------------------------");
             System.out.println("=============================\n");
 
+            JTable table = new JTable(tableModel);
+            table.setRowHeight(25); // 设置行高
+            // 设置列宽，和控制台的格式化对齐对应
+            table.getColumnModel().getColumn(0).setPreferredWidth(100); // 档案号
+            table.getColumnModel().getColumn(1).setPreferredWidth(120); // 创建者
+            table.getColumnModel().getColumn(2).setPreferredWidth(180); // 文件名
+            table.getColumnModel().getColumn(3).setPreferredWidth(250); // 描述
+
+            // 用滚动面板包裹表格，防止数据过多溢出
+            JScrollPane scrollPane = new JScrollPane(table);
+            scrollPane.setPreferredSize(new Dimension(700, 400)); // 设置窗口大小
+
+            // 弹窗展示表格，标题显示档案总数
+            JOptionPane.showMessageDialog(
+                    null,
+                    scrollPane,
+                    "档案列表（总数：" + allArchives.size() + "）",
+                    JOptionPane.PLAIN_MESSAGE // 去掉问号图标
+            );
+
         } catch (SQLException e) {
             // 捕获并重新抛出 SQL 异常
             System.err.println("查询档案列表失败：" + e.getMessage());
+            JOptionPane.showMessageDialog(null, "查询档案列表失败：" + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
             throw e;
         } catch (Exception e) {
             // 捕获未知异常并包装为 SQLException 抛出
             System.err.println("显示档案列表时发生未知错误：" + e.getMessage());
+            JOptionPane.showMessageDialog(null, "显示档案列表时发生未知错误：" + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
             throw new SQLException("显示档案列表失败", e);
         }
     }

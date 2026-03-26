@@ -253,7 +253,7 @@ public  class DataProcessing {
      * @param role 用户角色
      * @return 对应的用户对象，如果角色无效则返回 null
      */
-    private static AbstractUser createUserByRole(String name, String password, String role) {
+    private static AbstractUser createUserByRole(String name, String password, String role) throws SQLException{
         if (ROLE_ADMINISTRATOR.equalsIgnoreCase(role)) {
             return new Administrator(name, password, role);
         } else if (ROLE_OPERATOR.equalsIgnoreCase(role)) {
@@ -262,7 +262,7 @@ public  class DataProcessing {
             return new Browser(name, password, role);
         } else {
             System.err.println("创建失败：无效的角色 - " + role);
-            return null;
+            throw new SQLException("创建失败：无效的角色 - " + role);
         }
     }
 
