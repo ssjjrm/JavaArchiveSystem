@@ -1,6 +1,7 @@
 package pojo;
 
 import mapper.DataProcessing;
+import mapper.UserMapper;
 
 import javax.swing.*;
 import java.io.IOException;
@@ -9,7 +10,7 @@ import java.time.LocalDateTime;
 import java.util.Scanner;
 
 public class Operator extends AbstractUser {//档案录入人员
-
+    private Integer id;
     private String name;
     private String password;
     private String role;
@@ -17,7 +18,8 @@ public class Operator extends AbstractUser {//档案录入人员
     public Operator() {
     }
 
-    public Operator(String name, String password, String role) {
+    public Operator(Integer id,String name, String password, String role) {
+        this.id = id;
         this.name = name;
         this.password = password;
         this.role = role;
@@ -57,7 +59,7 @@ public class Operator extends AbstractUser {//档案录入人员
             int choice = result + 1;
 
             if(choice==1){
-                String archiveId = String.valueOf(DataProcessing.getArchivesLength());
+                //Integer archiveId = DataProcessing.getArchivesLength()+1;
 
                 // 图形界面输入 创建者
                 String creator = JOptionPane.showInputDialog("输入档案创建者");
@@ -71,7 +73,7 @@ public class Operator extends AbstractUser {//档案录入人员
                 String fileName = JOptionPane.showInputDialog("输入文件名");
                 if (fileName == null) continue;
 
-                Archive archive = new Archive(archiveId,creator, LocalDateTime.now(),description,fileName);
+                Archive archive = new Archive(creator, LocalDateTime.now(),description,fileName);
                 try {
                     DataProcessing.insertArchive(archive);
                     JOptionPane.showMessageDialog(null, "上传成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
@@ -85,7 +87,7 @@ public class Operator extends AbstractUser {//档案录入人员
             if(choice==2){
                 try {
                     // 图形界面输入档案号
-                    String archiveId = JOptionPane.showInputDialog("输入档案号");
+                    Integer archiveId = Integer.valueOf(JOptionPane.showInputDialog("输入档案号"));
                     if (archiveId == null) continue;
 
                     String downloadFileOperator = "src\\main\\resources\\data\\download_files\\Operator\\"+this.name+"\\";
@@ -111,8 +113,11 @@ public class Operator extends AbstractUser {//档案录入人员
                 if (newPassword == null) continue;
 
                 try {
-                    changeSelfInfo(this.name,newPassword, this.role);
-                    JOptionPane.showMessageDialog(null, "密码修改成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
+                    if(changeSelfInfo(new Operator(this.id,this.name,newPassword,this.role))){
+                        JOptionPane.showMessageDialog(null, "密码修改成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
+                    }else {
+                        JOptionPane.showMessageDialog(null, "密码不符合要求！", "提示", JOptionPane.INFORMATION_MESSAGE);
+                    }
                 } catch (SQLException e) {
                     System.err.println("操作失败：" + e.getMessage());
                     System.err.flush();
@@ -176,5 +181,21 @@ public class Operator extends AbstractUser {//档案录入人员
 
     public String toString() {
         return "Operator{name = " + name + ", password = " + password + ", role = " + role + "}";
+    }
+
+    /**
+     * 获取
+     * @return id
+     */
+    public Integer getId() {
+        return id;
+    }
+
+    /**
+     * 设置
+     * @param id
+     */
+    public void setId(Integer id) {
+        this.id = id;
     }
 }

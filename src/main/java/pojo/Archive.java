@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.Objects;
 import java.io.Serial;
 
+
 /**
  * 档案类
  * 用于表示和管理档案的基本信息
@@ -13,28 +14,22 @@ import java.io.Serial;
 public class Archive implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
-
-    private final String archiveId;
+    private Integer archiveId;
     private String creator;
-    private LocalDateTime timestamp;//时间戳
-    private String description;//档案描述
-    private String fileName;//文件名
+    private LocalDateTime timestamp;
+    private String description;
+    private String fileName;
 
-    /**
-     * 构造方法
-     *
-     * @param archiveId   档案号
-     * @param creator     档案创建者
-     * @param timestamp   时间戳
-     * @param description 档案描述
-     * @param fileName    文件名
-     */
-    public Archive(String archiveId, String creator, LocalDateTime timestamp, String description, String fileName) {
-        this.archiveId = archiveId.trim();
-        this.creator = creator.trim();
+    // 1. 必须通过构造器初始化 final 字段（无参构造器赋默认值，MyBatis兼容）
+    public Archive() {
+    }
+
+    // 2. 全参构造器（核心构造方法）
+    public Archive(String creator, LocalDateTime timestamp, String description, String fileName) {
+        this.creator = creator;
         this.timestamp = timestamp;
         this.description = description;
-        this.fileName = fileName.trim();
+        this.fileName = fileName;
     }
 
     /**
@@ -42,10 +37,8 @@ public class Archive implements Serializable {
      *
      * @return 档案号
      */
-    public String getArchiveId() {
-        return archiveId;
-    }
-
+    public Integer getArchiveId() { return archiveId; }
+    public void setArchiveId(Integer archiveId) { this.archiveId = archiveId; }
     /**
      * 获取档案创建者
      *

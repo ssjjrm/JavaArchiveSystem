@@ -7,62 +7,14 @@ import java.sql.SQLException;
 import java.util.Scanner;
 
 
-//public class Test {
-//    public static void main(String[] args) {
+public class Test {
+    public static void main(String[] args) {
 //        try {
 //            DataProcessing.connectToDatabase();
 //        } catch (SQLException e) {
 //            System.err.println("操作失败：" + e.getMessage());
 //            System.err.flush();
 //        }
-//        while(true){
-//            System.out.println("欢迎进入系统，选择菜单");
-//            System.out.println("1.登录 2.退出");
-//            Scanner sc = new Scanner(System.in);
-//            int select1 = sc.nextInt();
-//            if(select1==1){
-//                System.out.println("输入用户名");
-//                String name = sc.next();
-//                System.out.println("输入密码");
-//                String password = sc.next();
-//                AbstractUser tempUser = null;
-//                try {
-//                    tempUser = DataProcessing.searchUser(name,password);
-//                } catch (SQLException e) {
-//                    System.err.println("操作失败：" + e.getMessage());
-//                    System.err.flush();
-//                }
-//
-//                if(tempUser!=null){
-//                    tempUser.showMenu();
-//                }else{
-//                    System.out.println("登录失败");
-//                    System.err.flush();
-//                }
-//            }if(select1==2){
-//                System.exit(0);
-//            }else{
-//
-//            }
-//
-//        }
-//    }
-//
-//
-//}
-
-
-
-
-
-public class Test {
-    public static void main(String[] args) {
-        try {
-            DataProcessing.connectToDatabase();
-        } catch (SQLException e) {
-            System.err.println("操作失败：" + e.getMessage());
-            System.err.flush();
-        }
 
         while (true) {
             JTextField nameField = new JTextField();
@@ -84,18 +36,33 @@ public class Test {
                 String name = nameField.getText().trim();
                 String password = new String(pwdField.getPassword()).trim();
 
-                // 完全用你自己的登录验证逻辑
-                AbstractUser tempUser = null;
+                User tempUser1 = null;
+                AbstractUser tempUser2 = null;
                 try {
-                    tempUser = DataProcessing.searchUser(name,password);
+                    tempUser1 = DataProcessing.searchUser(name,password);
+                    String role = null;
+                    if (tempUser1 == null) {
+                        JOptionPane.showMessageDialog(null, "账号或密码错误！", "错误", JOptionPane.ERROR_MESSAGE);
+                        nameField.setText("");
+                        pwdField.setText("");
+                        continue;
+                    }
+                    role = tempUser1.getRole();
+                    if ("administrator".equals(role)) {
+                        tempUser2 = new Administrator(tempUser1.getId(), tempUser1.getName(), tempUser1.getPassword(), tempUser1.getRole());
+                    } else if ("operator".equals(role)) {
+                        tempUser2 = new Operator(tempUser1.getId(), tempUser1.getName(), tempUser1.getPassword(), tempUser1.getRole());
+                    } else if ("browser".equals(role)) {
+                        tempUser2 = new Browser(tempUser1.getId(), tempUser1.getName(), tempUser1.getPassword(), tempUser1.getRole());
+                    }
                 } catch (SQLException e) {
                     System.err.println("操作失败：" + e.getMessage());
                     System.err.flush();
                 }
-                if (tempUser != null) {
+                if (tempUser2 != null) {
                     JOptionPane.showMessageDialog(null, "登录成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
                     // 登录成功，退出图形界面，调用showMenu()
-                    tempUser.showMenu();
+                    tempUser2.showMenu();
                 } else {
                     JOptionPane.showMessageDialog(null, "账号或密码错误！", "错误", JOptionPane.ERROR_MESSAGE);
                     nameField.setText("");

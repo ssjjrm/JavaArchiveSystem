@@ -1,5 +1,8 @@
 package pojo;
 
+import mapper.UserMapper;
+import org.apache.ibatis.annotations.AutomapConstructor;
+
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Scanner;
@@ -7,6 +10,7 @@ import javax.swing.*;
 
 
 public class Browser extends AbstractUser {
+    private Integer id;
     private String name;
     private String password;
     private String role;
@@ -14,56 +18,13 @@ public class Browser extends AbstractUser {
     public Browser() {
     }
 
-    public Browser(String name, String password, String role) {
+    public Browser(Integer id,String name, String password, String role) {
+        this.id = id;
         this.name = name;
         this.password = password;
         this.role = role;
     }
 
-//    @Override
-//    public void showMenu()  {
-//        while(true){
-//            System.out.println("*****************菜单******************");
-//            System.out.println("1.下载档案；2.档案列表；3.修改个人密码；4.退出登录。");
-//            Scanner sc = new Scanner(System.in);
-//            int choice = sc.nextInt();
-//            if(choice==1){
-//                try {
-//                    System.out.println("输入档案号");
-//                    String archiveId = sc.next();
-//                    String downloadFileBrowser = "src\\main\\resources\\data\\download_files\\Browser\\"+this.name+"\\";
-//                    downloadArchive(archiveId,downloadFileBrowser);
-//                } catch (IOException | SQLException e) {
-//                    System.err.println("操作失败：" + e.getMessage());
-//                    System.err.flush();
-//                }
-//            }
-//            if(choice==2){
-//                try {
-//                    listAllArchives();
-//                } catch (SQLException e) {
-//                    System.err.println("操作失败：" + e.getMessage());
-//                    System.err.flush();
-//                }
-//            }if(choice==3){
-//                System.out.println("输入新密码");
-//                String newPassword = sc.next();
-//                try {
-//                    changeSelfInfo(this.name,newPassword, this.role);
-//                } catch (SQLException e) {
-//                    System.err.println("操作失败：" + e.getMessage());
-//                    System.err.flush();
-//                }
-//            }if(choice==4){
-//                return;
-//            }
-//        }
-//
-//    }
-
-
-
-    /// ////////////////////////////新方法//////////////////////////
 
 
     @Override
@@ -104,7 +65,7 @@ public class Browser extends AbstractUser {
             if(choice==1){
                 try {
                     System.out.println("输入档案号");
-                    String archiveId = JOptionPane.showInputDialog("输入档案号");
+                    Integer archiveId = Integer.valueOf(JOptionPane.showInputDialog("输入档案号"));
                     if (archiveId == null) continue; // 点取消直接回到菜单，不执行后续逻辑
 
                     String downloadFileBrowser = "src\\main\\resources\\data\\download_files\\Browser\\"+this.name+"\\";
@@ -128,7 +89,11 @@ public class Browser extends AbstractUser {
                 if (newPassword == null) continue; // 点取消直接回到菜单，不执行后续逻辑
 
                 try {
-                    changeSelfInfo(this.name,newPassword, this.role);
+                    if(changeSelfInfo(new Browser(this.id,this.name,newPassword,this.role))){
+                        JOptionPane.showMessageDialog(null, "密码修改成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
+                    }else {
+                        JOptionPane.showMessageDialog(null, "密码不符合要求！", "提示", JOptionPane.INFORMATION_MESSAGE);
+                    }
                 } catch (SQLException e) {
                     System.err.println("操作失败：" + e.getMessage());
                     System.err.flush();
@@ -139,22 +104,6 @@ public class Browser extends AbstractUser {
             }
         }
     }
-
-
-
-
-
-
-
-
-
-
-
-
-    /// //////////////////////////////////////////////////////////
-
-
-
 
 
     /**
@@ -208,4 +157,22 @@ public class Browser extends AbstractUser {
     public String toString() {
         return "Browser{name = " + name + ", password = " + password + ", role = " + role + "}";
     }
+
+    /**
+     * 获取
+     * @return id
+     */
+    public Integer getId() {
+        return id;
+    }
+
+    /**
+     * 设置
+     * @param id
+     */
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+
 }

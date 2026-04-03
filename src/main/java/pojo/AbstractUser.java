@@ -3,14 +3,14 @@ import java.sql.SQLException;
 import java.io.IOException;
 
 import mapper.DataProcessing;
-
+import mapper.UserMapper;
+import org.apache.ibatis.session.SqlSession;
+import util.MyBatisUtil;
 import javax.swing.*;
 import java.io.*;
 import java.util.Collection;
-import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.util.Collection; // 【确保这两个导入已存在，没有的话加上】
 
 
 /**
@@ -21,6 +21,7 @@ import java.util.Collection; // 【确保这两个导入已存在，没有的话
  * @author gongjing
  */
 public abstract class AbstractUser {
+    private Integer id;
     private String name;
     private String password;
     private String role;
@@ -47,41 +48,54 @@ public abstract class AbstractUser {
      * @param password 用户密码
      * @param role 用户角色
      */
-    AbstractUser(String name,String password,String role){
+    public AbstractUser(Integer id,String name,String password,String role){
+        this.id = id;
         this.name=name;
         this.password=password;
         this.role=role;
     }
 
+
+    private UserMapper getUserMapper() {
+        SqlSession session = util.MyBatisUtil.getSqlSession();
+        return session.getMapper(UserMapper.class);
+    }
+
+
     /**
      * 修改用户个人信息
      * 该方法用于更新用户的密码信息，包含密码合法性验证和数据持久化操作
      *
-     * @param password 新密码，需要满足最小长度要求且不能为空
+     * @param user 新密码，需要满足最小长度要求且不能为空
      * @return boolean 修改是否成功，成功返回 true，失败返回 false
      * @throws SQLException 当数据库更新操作发生错误时抛出
      */
-    public boolean changeSelfInfo(String name,String password,String role) throws SQLException{
+    public boolean changeSelfInfo(AbstractUser user) throws SQLException{
         final String successMessage = "修改成功";
         final String failureMessage = "修改失败";
         final String invalidPasswordMessage = "密码不符合要求";
         final int minPasswordLength = 3;
 
         // 密码合法性校验：检查密码是否为空、是否满足最小长度要求
-        if (password == null  || password.trim().isEmpty()|| password.length() < minPasswordLength) {
+        if (user.getPassword() == null  || user.getPassword().trim().isEmpty()|| user.getPassword().length() < minPasswordLength) {
             System.err.println(invalidPasswordMessage);
             return false;
         }
 
-        // 调用数据处理类更新用户信息
-        if (DataProcessing.updateUser(name, password, role)) {
-            this.password = password;
-            System.out.println(successMessage);
-            return true;
-        } else {
-            System.err.println(failureMessage);
-            return false;
+        // 更新用户信息
+        try (SqlSession session = MyBatisUtil.getSqlSession()) {
+            UserMapper userMapper = session.getMapper(UserMapper.class);
+            if (userMapper.updatePassword(user)) {
+                System.out.println(successMessage);
+                return true;
+            } else {
+                System.err.println(failureMessage);
+                return false;
+            }
         }
+
+
+
     }
 
     /**
@@ -94,12 +108,12 @@ public abstract class AbstractUser {
      * @throws SQLException 当数据库查询发生错误时抛出
      * @throws IOException 当文件读写或 IO 操作发生错误时抛出
      */
-    public boolean downloadArchive(String archiveId, String destPath) throws SQLException, IOException {
+    public boolean downloadArchive(Integer archiveId, String destPath) throws SQLException, IOException {
         final String failureMessage = "档案号不能为空";
         final int bufferSize = 8192;
 
         // 参数验证：检查档案号是否为空
-        if (archiveId == null || archiveId.trim().isEmpty()) {
+        if (archiveId == null) {
             System.err.println(failureMessage);
             return false;
         }
@@ -111,8 +125,8 @@ public abstract class AbstractUser {
         }
 
         try {
-            // 根据档案号查询档案信息
-            Archive archive = DataProcessing.searchArchive(archiveId.trim());
+            // 根据档案号查询档案信息（数据库查询，你已完成）
+            Archive archive = DataProcessing.searchArchive(archiveId);
             if (archive == null) {
                 System.err.println("下载失败：档案号不存在 - " + archiveId);
                 JOptionPane.showMessageDialog(null, "下载失败：档案号不存在 - " + archiveId, "错误", JOptionPane.ERROR_MESSAGE);
@@ -126,9 +140,6 @@ public abstract class AbstractUser {
             System.out.println("描述：" + archive.getDescription());
             System.out.println("创建者：" + archive.getCreator());
 
-            System.out.println("档案源文件路径：" + archiveDir);
-            System.out.println("目标文件路径：" + destPath);
-
             //新增：拼接信息，准备图形界面展示
             StringBuilder downloadInfo = new StringBuilder();
             downloadInfo.append("=== 正在下载档案 ===\n");
@@ -136,21 +147,10 @@ public abstract class AbstractUser {
             downloadInfo.append("文件名：").append(archive.getFileName()).append("\n");
             downloadInfo.append("描述：").append(archive.getDescription()).append("\n");
             downloadInfo.append("创建者：").append(archive.getCreator()).append("\n\n");
-            downloadInfo.append("档案源文件路径：").append(archiveDir).append("\n");
             downloadInfo.append("目标文件路径：").append(destPath).append("\n");
 
-
-            // 构建档案文件的完整路径
-            File archiveFile = new File(archiveDir+ archive.getFileName()+".ser");
-
-            // 安全检查：验证文件是否存在且为有效文件
-            if (!archiveFile.exists() || !archiveFile.isFile()) {
-                System.err.println("\n警告：档案文件不存在：" + archiveFile.getAbsolutePath());
-                JOptionPane.showMessageDialog(null, "警告：档案文件不存在：" + archiveFile.getAbsolutePath(), "错误", JOptionPane.ERROR_MESSAGE);
-                return false;
-            }
-
-            // 创建目标目录（如果不存在）
+            // ===================== 核心改造 =====================
+            // 1. 创建目标目录（如果不存在）
             File targetDir = new File(destPath);
             if (!targetDir.exists()) {
                 if (!targetDir.mkdirs()) {
@@ -160,20 +160,14 @@ public abstract class AbstractUser {
                 }
             }
 
-            // 构建目标文件的完整路径
-            File targetFile = new File(targetDir, archiveFile.getName());
+            // 2. 构建目标文件（保持原 .ser 后缀，和你旧逻辑一致）
+            File targetFile = new File(targetDir, archive.getFileName() + ".ser");
 
-            // 使用 try-with-resources 确保资源正确关闭
-            // 通过缓冲流实现文件的高效复制
-            byte[] buffer = new byte[bufferSize];
-            try (BufferedInputStream inFile = new BufferedInputStream(new FileInputStream(archiveFile));
-                 BufferedOutputStream outFile = new BufferedOutputStream(new FileOutputStream(targetFile))) {
-
-                int bytesRead;
-                while ((bytesRead = inFile.read(buffer)) != -1) {
-                    outFile.write(buffer, 0, bytesRead);
-                }
+            // 3. 将数据库查询到的 Archive 对象 直接序列化写入文件（核心改动）
+            try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(targetFile))) {
+                oos.writeObject(archive);
             }
+            // ======================================================
 
             System.out.println("文件下载成功：" + targetFile.getAbsolutePath());
 
@@ -183,17 +177,14 @@ public abstract class AbstractUser {
 
             return true;
         } catch (IOException e) {
-            // 捕获并重新抛出 IO 异常
             System.err.println("下载过程中发生 IO 错误：" + e.getMessage());
             JOptionPane.showMessageDialog(null, "下载过程中发生 IO 错误：" + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
             throw e;
         } catch (SQLException e) {
-            // 捕获并重新抛出 SQL 异常
             System.err.println("数据库查询错误：" + e.getMessage());
             JOptionPane.showMessageDialog(null, "数据库查询错误：" + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
             throw e;
         } catch (Exception e) {
-            // 捕获未知异常并返回失败
             System.err.println("下载过程中发生未知错误：" + e.getMessage());
             JOptionPane.showMessageDialog(null, "下载过程中发生未知错误：" + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
             return false;
@@ -248,7 +239,7 @@ public abstract class AbstractUser {
                         description);
 
                 tableModel.addRow(new String[]{
-                        archive.getArchiveId(),
+                        String.valueOf(archive.getArchiveId()),
                         archive.getCreator(),
                         archive.getFileName(),
                         description // 表格里也用截断后的描述，和控制台保持一致
@@ -324,6 +315,8 @@ public abstract class AbstractUser {
         return name;
     }
 
+
+
     /**
      * 设置用户名
      * @param name 用户名
@@ -362,5 +355,25 @@ public abstract class AbstractUser {
      */
     public void setRole(String role) {
         this.role = role;
+    }
+
+    /**
+     * 获取
+     * @return id
+     */
+    public Integer getId() {
+        return id;
+    }
+
+    /**
+     * 设置
+     * @param id
+     */
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String toString() {
+        return "AbstractUser{id = " + id + ", name = " + name + ", password = " + password + ", role = " + role + ", archiveDir = " + archiveDir + ", downloadDir = " + downloadDir + "}";
     }
 }

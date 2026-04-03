@@ -1,6 +1,8 @@
 package pojo;
 
 import mapper.DataProcessing;
+import mapper.UserMapper;
+import org.apache.ibatis.session.SqlSession;
 
 import java.awt.*;
 import java.io.IOException;
@@ -11,6 +13,7 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
 public class Administrator extends AbstractUser {
+    private Integer id;
     private String name;
     private String password;
     private String role;
@@ -18,10 +21,16 @@ public class Administrator extends AbstractUser {
     public Administrator() {
     }
 
-    public Administrator(String name, String password, String role) {
+    public Administrator(Integer id,String name, String password, String role) {
+        this.id = id;
         this.name = name;
         this.password = password;
         this.role = role;
+    }
+
+    private UserMapper getUserMapper() {
+        SqlSession session = util.MyBatisUtil.getSqlSession();
+        return session.getMapper(UserMapper.class);
     }
 
 
@@ -117,13 +126,16 @@ public class Administrator extends AbstractUser {
             }
 
             if(choice==3){
+                int newId = Integer.parseInt(JOptionPane.showInputDialog("输入id"));
+                //if (newId == null) continue;
+
                 String newName = JOptionPane.showInputDialog("输入用户名");
                 if (newName == null) continue;
 
                 String newPassword = JOptionPane.showInputDialog("输入密码");
                 if (newPassword == null) continue;
 
-                // ============== 【核心修改：角色输入框 → 3个按钮选择】 ==============
+                // ============== 【角色输入框 → 3个按钮选择】 ==============
                 Object[] roleButtons = {"Administrator(管理员)", "Operator(录入员)", "Browser(浏览者)"};
                 int roleResult = JOptionPane.showOptionDialog(
                         null,
@@ -147,8 +159,12 @@ public class Administrator extends AbstractUser {
                 }
 
                 try {
-                    DataProcessing.updateUser(newName, newPassword, newRole);
-                    JOptionPane.showMessageDialog(null, "修改用户成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
+                    if(DataProcessing.updateUser(newId, newName, newPassword, newRole)){
+                        JOptionPane.showMessageDialog(null, "修改用户成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
+                    }else {
+                        JOptionPane.showMessageDialog(null, "修改用户失败！", "提示", JOptionPane.INFORMATION_MESSAGE);
+                    }
+
                 } catch (SQLException e) {
                     System.err.println("操作失败：" + e.getMessage());
                     System.err.flush();
@@ -157,14 +173,14 @@ public class Administrator extends AbstractUser {
             }
 
             if(choice==4){
-                Collection<AbstractUser> allUsers = null;
+                Collection<User> allUsers = null;
                 try {
                     allUsers = DataProcessing.getAllUsers();
                 } catch (SQLException e) {
                     System.err.println("操作失败：" + e.getMessage());
                     System.err.flush();
                 }
-                for(AbstractUser u:allUsers){
+                for(User u:allUsers){
                     System.out.println(u.toString());
                 }
 
@@ -179,7 +195,7 @@ public class Administrator extends AbstractUser {
                 DefaultTableModel tableModel = new DefaultTableModel(columns, 0);
 
                 // 填充用户数据
-                for (AbstractUser user : allUsers) {
+                for (User user : allUsers) {
                     tableModel.addRow(new String[]{
                             user.getName(),
                             user.getPassword(),
@@ -211,7 +227,7 @@ public class Administrator extends AbstractUser {
 
             if(choice==5){
                 try {
-                    String archiveId = JOptionPane.showInputDialog("输入档案号");
+                    Integer archiveId = Integer.valueOf(JOptionPane.showInputDialog("输入档案号"));
                     if (archiveId == null) continue;
 
                     String downloadFileAdministrator = "src\\main\\resources\\data\\download_files\\Administrator\\"+this.name+"\\";
@@ -236,8 +252,11 @@ public class Administrator extends AbstractUser {
                 if (newPassword == null) continue;
 
                 try {
-                    changeSelfInfo(this.name,newPassword, this.role);
-                    JOptionPane.showMessageDialog(null, "密码修改成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
+                    if(changeSelfInfo(new Administrator(this.id,this.name,newPassword,this.role))){
+                        JOptionPane.showMessageDialog(null, "密码修改成功！", "提示", JOptionPane.INFORMATION_MESSAGE);
+                    }else {
+                        JOptionPane.showMessageDialog(null, "密码不符合要求！", "提示", JOptionPane.INFORMATION_MESSAGE);
+                    }
                 } catch (SQLException e) {
                     System.err.println("操作失败：" + e.getMessage());
                     System.err.flush();
@@ -302,5 +321,15 @@ public class Administrator extends AbstractUser {
 
     public String toString() {
         return "Administrator{name = " + name + ", password = " + password + ", role = " + role + "}";
+    }
+
+    @Override
+    public Integer getId() {
+        return id;
+    }
+
+    @Override
+    public void setId(Integer id) {
+        this.id = id;
     }
 }
